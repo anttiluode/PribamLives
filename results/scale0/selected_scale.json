@@ -3,13 +3,23 @@
     "2.edf",
     "3.edf"
   ],
+  "held_out_test_target": {
+    "duration_seconds": 61.0,
+    "file": "1.edf",
+    "sample_rate": 160.0,
+    "samples": 9760
+  },
   "hop_fraction": 0.25,
   "lag_seconds": 0.025,
   "max_loop_seconds": null,
-  "median_file_predictive_gain": 0.46340901109307764,
+  "median_file_predictive_gain": 0.3631974559229587,
   "min_loop_window_multiple": 3.0,
-  "note": "Scale selected without computing winding.",
-  "selection_rule": "maximize median file-level held-out forward predictive gain",
-  "window_seconds": 20.0,
-  "worst_file_predictive_gain": 0.45985334208719175
+  "note": "Scale selected without computing winding. Held-out target values were not scored; only target duration/sample-rate constrained testability.",
+  "selection_rule": "maximize median file-level held-out forward predictive gain subject to held-out target being physically testable",
+  "target_min_loop_seconds": 36.0,
+  "target_operator_windows": 17,
+  "target_required_operator_windows": 13,
+  "target_testable": true,
+  "window_seconds": 12.0,
+  "worst_file_predictive_gain": 0.36316276576299056
 }
