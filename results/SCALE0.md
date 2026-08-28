@@ -85,7 +85,16 @@ It does not prove a biological time constant.
 
 It gives a non-topological operational criterion for the analysis scale.
 
-## Run on the three local EEG files
+## Run on the local EEG files
+
+### Hold the candidate out
+
+Because `1.edf` is the candidate being tested, SCALE0 should not use it to
+choose the time scale.
+
+Choose the predictive scale from `2.edf` and `3.edf` only, then apply that
+frozen scale to `1.edf`.
+
 
 ```bash
 python scale_select.py E:\\DocsHouse\\450 \
