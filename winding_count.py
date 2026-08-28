@@ -842,16 +842,15 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    selected_scale = None
     if args.scale_json is not None:
-        selected = json.loads(args.scale_json.read_text(encoding="utf-8"))
+        selected_scale = json.loads(args.scale_json.read_text(encoding="utf-8"))
+
+        # Legacy/sample-specific fields are accepted, but scale_select.py writes
+        # physical seconds so the same frozen scale can transfer across sample rates.
         for key in ("window", "lag", "hop", "min_loop_seconds", "max_loop_seconds"):
-            if key in selected and selected[key] is not None:
-                setattr(args, key, selected[key])
-        print(
-            "Loaded preselected scale: "
-            f"window={args.window}, lag={args.lag}, hop={args.hop}, "
-            f"min_loop_seconds={args.min_loop_seconds}"
-        )
+            if key in selected_scale and selected_scale[key] is not None:
+                setattr(args, key, selected_scale[key])
 
     if args.self_test:
         result = self_test(args)
@@ -870,6 +869,38 @@ def main() -> None:
         exclude_regex=args.exclude_regex,
         list_channels=args.list_channels,
     )
+
+    if selected_scale is not None:
+        if sample_rate is not None and "window_seconds" in selected_scale:
+            args.window = max(
+                16,
+                int(round(float(selected_scale["window_seconds"]) * sample_rate)),
+            )
+        if sample_rate is not None and "lag_seconds" in selected_scale:
+            args.lag = max(
+                1,
+                int(round(float(selected_scale["lag_seconds"]) * sample_rate)),
+            )
+
+        hop_fraction = float(selected_scale.get("hop_fraction", 0.25))
+        args.hop = max(1, int(round(args.window * hop_fraction)))
+
+        if "min_loop_window_multiple" in selected_scale and sample_rate is not None:
+            args.min_loop_seconds = (
+                float(selected_scale["min_loop_window_multiple"])
+                * float(args.window)
+                / float(sample_rate)
+            )
+
+        if "max_loop_seconds" in selected_scale:
+            args.max_loop_seconds = selected_scale["max_loop_seconds"]
+
+        print(
+            "Loaded preselected physical scale: "
+            f"window={args.window} samples, lag={args.lag}, hop={args.hop}, "
+            f"min_loop_seconds={args.min_loop_seconds}"
+        )
+
     summary = run_analysis(args, data, sample_rate)
     print(json.dumps(summary, indent=2, sort_keys=True))
 
