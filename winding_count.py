@@ -53,7 +53,12 @@ class LoopEvent:
     median_radius: float
 
 
-def load_stream(path: Path) -> Tuple[Array, float | None]:
+def load_stream(
+    path: Path,
+    *,
+    max_seconds: float | None = None,
+    max_channels: int | None = None,
+) -> Tuple[Array, float | None]:
     suffix = path.suffix.lower()
 
     if suffix == ".npy":
@@ -82,8 +87,30 @@ def load_stream(path: Path) -> Tuple[Array, float | None]:
         else:
             data = data.astype(float)
 
+    elif suffix == ".edf":
+        try:
+            import mne
+        except ImportError as exc:
+            raise RuntimeError(
+                "EDF support requires MNE: python -m pip install mne"
+            ) from exc
+
+        raw = mne.io.read_raw_edf(path, preload=False, verbose=False)
+        sample_rate = float(raw.info["sfreq"])
+        picks = list(range(len(raw.ch_names)))
+        if max_channels is not None:
+            picks = picks[: int(max_channels)]
+
+        stop = None
+        if max_seconds is not None:
+            stop = min(
+                raw.n_times,
+                int(round(float(max_seconds) * sample_rate)),
+            )
+        data = raw.get_data(picks=picks, start=0, stop=stop).T
+
     else:
-        raise ValueError("supported input types: .npy, .csv, .wav")
+        raise ValueError("supported input types: .npy, .csv, .wav, .edf")
 
     data = np.asarray(data, dtype=float)
 
@@ -102,6 +129,16 @@ def load_stream(path: Path) -> Tuple[Array, float | None]:
 
     if len(data) < 256:
         raise ValueError("stream is too short after cleaning")
+
+    if max_channels is not None and data.shape[1] > int(max_channels):
+        data = data[:, : int(max_channels)]
+
+    if (
+        max_seconds is not None
+        and sample_rate is not None
+        and len(data) > int(round(float(max_seconds) * float(sample_rate)))
+    ):
+        data = data[: int(round(float(max_seconds) * float(sample_rate)))]
 
     if data.shape[1] < 2:
         raise ValueError("need at least two channels")
@@ -633,6 +670,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--modes", type=int, default=6)
     parser.add_argument("--surrogates", type=int, default=100)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--max-seconds",
+        type=float,
+        default=None,
+        help="optional input-duration cap (useful for large EDF/WAV files)",
+    )
+    parser.add_argument(
+        "--max-channels",
+        type=int,
+        default=None,
+        help="optional channel cap, taking the first channels in the file",
+    )
     parser.add_argument("--min-loop-windows", type=int, default=12)
     parser.add_argument("--max-loop-windows", type=int, default=200)
     parser.add_argument("--return-fraction", type=float, default=0.25)
@@ -660,7 +709,11 @@ def main() -> None:
     if args.input is None:
         parser.error("provide an input file or use --self-test")
 
-    data, sample_rate = load_stream(args.input)
+    data, sample_rate = load_stream(
+        args.input,
+        max_seconds=args.max_seconds,
+        max_channels=args.max_channels,
+    )
     summary = run_analysis(args, data, sample_rate)
     print(json.dumps(summary, indent=2, sort_keys=True))
 
