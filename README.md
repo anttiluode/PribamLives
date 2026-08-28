@@ -181,6 +181,7 @@ Run the scale selector on the three EEG files:
 python3.13 scale_select.py E:\DocsHouse\450 ^
   --pattern "*.edf" ^
   --exclude-names "1.edf" ^
+  --test-target-name "1.edf" ^
   --edf-eeg-only ^
   --out-dir results\scale0
 ```
@@ -200,6 +201,32 @@ python3.13 winding_count.py E:\DocsHouse\450\1.edf ^
 Repeat for `2.edf` and `3.edf` without changing the scale file.
 
 See [results/SCALE0.md](results/SCALE0.md).
+### Important correction: the first SCALE0 zero was untestable
+
+The first predictive selector chose:
+
+```text
+window = 20 s
+lag    = 25 ms
+```
+
+from `2.edf` and `3.edf`. Applied to `1.edf`, that implied:
+
+```text
+window = 3200 samples
+hop    = 800 samples = 5 s
+minimum loop duration = 60 s
+available operator windows = 9
+required operator windows  = 13
+```
+
+So the observed `0 real / 0 null` result was **structurally forced**: the detector could not possibly observe a qualifying loop at that scale.
+
+`winding_count.py` now fails loudly on such an untestable scale instead of returning zeros.
+
+`scale_select.py` now accepts `--test-target-name` and may use only the held-out target's duration/sample rate—not its signal values—to reject predictive scales that cannot physically test the hypothesis.
+
+From the already committed predictive ranking, the best remaining testable candidate is expected to be **12 s / 25 ms**.
 ## Why this repository exists
 
 [MovingProblem](https://github.com/anttiluode/MovingProblem) was frozen at Gate 4 after finding a small but real failure mode:
