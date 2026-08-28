@@ -9,6 +9,7 @@ from winding_count import (
     analyze_paths,
     detect_near_return_loops,
     operator_path,
+    empirical_p_values,
     phase_randomized_surrogate,
     synthetic_loop_stream,
 )
@@ -50,6 +51,12 @@ class WindingCounterTests(unittest.TestCase):
         xmag = np.abs(np.fft.rfft((x - x.mean(0)) / x.std(0), axis=0))
         ymag = np.abs(np.fft.rfft(y, axis=0))
         self.assertLess(float(np.max(np.abs(xmag - ymag))), 1e-8)
+
+    def test_empirical_p_values_report_both_tails(self):
+        null = np.array([0, 1, 2, 3, 4], dtype=float)
+        upper, lower, two = empirical_p_values(1.0, null)
+        self.assertGreater(upper, lower)
+        self.assertLessEqual(two, 1.0)
 
     def test_synthetic_stream_yields_analyzable_operator_path(self):
         stream = synthetic_loop_stream(windows=40, window=256, seed=4)
