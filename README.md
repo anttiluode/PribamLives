@@ -84,6 +84,37 @@ python batch_winding.py E:\\DocsHouse\\450 \
 The batch tool deliberately reports **one row per file** and does not combine
 p-values. Multiple files from one subject/session may not be independent.
 
+## REAL1 — one candidate file, inconsistent batch
+
+The first three-file EEG batch is **not** a consistent population result.
+
+```text
+1.edf   real 2   null 0.25 ± 0.46   excess +1.75   upper p 0.0198
+2.edf   real 1   null 3.31 ± 1.67   excess -2.31
+3.edf   real 2   null 3.64 ± 1.74   excess -1.64
+```
+
+So `1.edf` is a candidate recording, not a discovery.
+
+It is also the shortest file: 9,760 samples / 16 windows versus 19,680 samples /
+35 windows in files 2 and 3. Its two detected loops span nearly the whole
+recording, and one candidate clears the configured finite-sample radius floor
+by only about 4%.
+
+The next attack is pre-specified sensitivity, not interpretation:
+
+```bash
+python stress_candidate.py E:\\DocsHouse\\450\\1.edf \
+  --edf-eeg-only \
+  --surrogates 1000 \
+  --out-dir results\\1edf_stress
+```
+
+This varies one detector parameter at a time around the frozen default and
+reports how often the positive real-minus-null direction survives.
+
+See [results/REAL1.md](results/REAL1.md).
+
 ## Why this repository exists
 
 [MovingProblem](https://github.com/anttiluode/MovingProblem) was frozen at Gate 4 after finding a small but real failure mode:
