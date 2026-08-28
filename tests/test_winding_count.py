@@ -11,6 +11,7 @@ from winding_count import (
     operator_path,
     empirical_p_values,
     phase_randomized_surrogate,
+    resolve_loop_window_limits,
     synthetic_loop_stream,
 )
 
@@ -51,6 +52,25 @@ class WindingCounterTests(unittest.TestCase):
         xmag = np.abs(np.fft.rfft((x - x.mean(0)) / x.std(0), axis=0))
         ymag = np.abs(np.fft.rfft(y, axis=0))
         self.assertLess(float(np.max(np.abs(xmag - ymag))), 1e-8)
+
+    def test_physical_loop_duration_is_hop_invariant(self):
+        a = resolve_loop_window_limits(
+            hop=512,
+            sample_rate=160.0,
+            min_loop_windows=12,
+            max_loop_windows=200,
+            min_loop_seconds=38.4,
+            max_loop_seconds=None,
+        )
+        b = resolve_loop_window_limits(
+            hop=384,
+            sample_rate=160.0,
+            min_loop_windows=12,
+            max_loop_windows=200,
+            min_loop_seconds=38.4,
+            max_loop_seconds=None,
+        )
+        self.assertEqual(a[0] * 512, b[0] * 384)
 
     def test_empirical_p_values_report_both_tails(self):
         null = np.array([0, 1, 2, 3, 4], dtype=float)
