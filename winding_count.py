@@ -571,6 +571,40 @@ def synthetic_loop_stream(
     return result
 
 
+
+def resolve_loop_window_limits(
+    *,
+    hop: int,
+    sample_rate: float | None,
+    min_loop_windows: int,
+    max_loop_windows: int,
+    min_loop_seconds: float | None = None,
+    max_loop_seconds: float | None = None,
+) -> Tuple[int, int]:
+    """Convert optional physical loop-duration limits into path-sample counts.
+
+    For sampled recordings, seconds override the legacy window-count limits.
+    This prevents a change in hop from silently changing the minimum physical
+    duration that qualifies as a loop.
+    """
+    minimum = int(min_loop_windows)
+    maximum = int(max_loop_windows)
+
+    if sample_rate is not None and min_loop_seconds is not None:
+        minimum = max(
+            1,
+            int(np.ceil(float(min_loop_seconds) * float(sample_rate) / float(hop))),
+        )
+
+    if sample_rate is not None and max_loop_seconds is not None:
+        maximum = max(
+            minimum,
+            int(np.floor(float(max_loop_seconds) * float(sample_rate) / float(hop))),
+        )
+
+    return minimum, maximum
+
+
 def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | None) -> Dict[str, object]:
     projected, starts = operator_path(
         data,
@@ -580,10 +614,19 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
         modes=args.modes,
     )
 
-    real_events, real_diag = analyze_paths(
-        projected,
+    effective_min_loop_windows, effective_max_loop_windows = resolve_loop_window_limits(
+        hop=args.hop,
+        sample_rate=sample_rate,
         min_loop_windows=args.min_loop_windows,
         max_loop_windows=args.max_loop_windows,
+        min_loop_seconds=args.min_loop_seconds,
+        max_loop_seconds=args.max_loop_seconds,
+    )
+
+    real_events, real_diag = analyze_paths(
+        projected,
+        min_loop_windows=effective_min_loop_windows,
+        max_loop_windows=effective_max_loop_windows,
         return_fraction=args.return_fraction,
         min_radius_fraction=args.min_radius_fraction,
         winding_tolerance=args.winding_tolerance,
@@ -608,8 +651,8 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
         )
         _, diag = analyze_paths(
             surrogate_projected,
-            min_loop_windows=args.min_loop_windows,
-            max_loop_windows=args.max_loop_windows,
+            min_loop_windows=effective_min_loop_windows,
+            max_loop_windows=effective_max_loop_windows,
             return_fraction=args.return_fraction,
             min_radius_fraction=args.min_radius_fraction,
             winding_tolerance=args.winding_tolerance,
@@ -638,6 +681,10 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
         "lag": int(args.lag),
         "modes": int(args.modes),
         "windows": int(len(starts)),
+        "min_loop_windows_effective": int(effective_min_loop_windows),
+        "max_loop_windows_effective": int(effective_max_loop_windows),
+        "min_loop_seconds": args.min_loop_seconds,
+        "max_loop_seconds": args.max_loop_seconds,
         "surrogates": int(args.surrogates),
         "real": real_diag,
         "null_odd_mean": null_mean,
@@ -760,6 +807,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--min-loop-windows", type=int, default=12)
     parser.add_argument("--max-loop-windows", type=int, default=200)
+    parser.add_argument(
+        "--min-loop-seconds",
+        type=float,
+        default=None,
+        help="physical minimum loop duration; overrides --min-loop-windows when sample rate is known",
+    )
+    parser.add_argument(
+        "--max-loop-seconds",
+        type=float,
+        default=None,
+        help="physical maximum loop duration; overrides --max-loop-windows when sample rate is known",
+    )
     parser.add_argument("--return-fraction", type=float, default=0.25)
     parser.add_argument("--min-radius-fraction", type=float, default=0.35)
     parser.add_argument("--winding-tolerance", type=float, default=0.20)
@@ -769,6 +828,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=4.0,
         help="minimum safe radius = multiple / sqrt(window-lag)",
     )
+    parser.add_argument(
+        "--scale-json",
+        type=Path,
+        default=None,
+        help="load preselected window/lag/hop/loop-duration settings from scale_select.py",
+    )
     parser.add_argument("--out", type=str, default="results/winding")
     return parser
 
@@ -776,6 +841,17 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.scale_json is not None:
+        selected = json.loads(args.scale_json.read_text(encoding="utf-8"))
+        for key in ("window", "lag", "hop", "min_loop_seconds", "max_loop_seconds"):
+            if key in selected and selected[key] is not None:
+                setattr(args, key, selected[key])
+        print(
+            "Loaded preselected scale: "
+            f"window={args.window}, lag={args.lag}, hop={args.hop}, "
+            f"min_loop_seconds={args.min_loop_seconds}"
+        )
 
     if args.self_test:
         result = self_test(args)
