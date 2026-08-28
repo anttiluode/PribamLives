@@ -26,7 +26,9 @@ non-enclosing control
 
 A first version without the finite-sample safety floor failed this scientific control even though unit tests were green: its phase-randomized null produced about one spurious loop too. The current detector therefore requires a candidate loop to remain several `1/sqrt(N)` estimator-noise scales away from the degeneracy.
 
-**No real-stream result has been claimed yet.**
+**Real-stream status:** two recordings are negative relative to their surrogate
+nulls; one shorter recording contains an analysis-scale-sensitive candidate.
+No robust real holonomy claim has been made.
 
 ## REAL0 — first real streams
 
@@ -84,7 +86,7 @@ python batch_winding.py E:\\DocsHouse\\450 \
 The batch tool deliberately reports **one row per file** and does not combine
 p-values. Multiple files from one subject/session may not be independent.
 
-## REAL1 — one candidate file, inconsistent batch
+## REAL1 — candidate survives detector tweaks, fails scale robustness
 
 The first three-file EEG batch is **not** a consistent population result.
 
@@ -94,26 +96,55 @@ The first three-file EEG batch is **not** a consistent population result.
 3.edf   real 2   null 3.64 ± 1.74   excess -1.64
 ```
 
-So `1.edf` is a candidate recording, not a discovery.
+So `1.edf` remains a candidate recording, not a discovery.
 
-It is also the shortest file: 9,760 samples / 16 windows versus 19,680 samples /
-35 windows in files 2 and 3. Its two detected loops span nearly the whole
-recording, and one candidate clears the configured finite-sample radius floor
-by only about 4%.
+A 16-setting one-factor-at-a-time stress test gave the tempting aggregate:
 
-The next attack is pre-specified sensitivity, not interpretation:
-
-```bash
-python stress_candidate.py E:\\DocsHouse\\450\\1.edf \
-  --edf-eeg-only \
-  --surrogates 1000 \
-  --out-dir results\\1edf_stress
+```text
+positive real-minus-null excess   11 / 16
+at least one real safe odd loop   11 / 16
+upper-tail p <= 0.05               8 / 16
 ```
 
-This varies one detector parameter at a time around the frozen default and
-reports how often the positive real-minus-null direction survives.
+But the pair-level files show that **11/16 overstates physical robustness**.
 
-See [results/REAL1.md](results/REAL1.md).
+The same exact baseline loops survive changes to:
+
+```text
+mode count
+closure threshold
+winding tolerance
+a slightly looser noise floor
+```
+
+while modest changes to the temporal coarse-graining are much harsher:
+
+```text
+window 2304   -> no loop
+hop 384       -> no loop
+hop 640       -> no loop
+lag 4         -> no loop
+window 1792   -> one loop, but on a different pair
+lag 16        -> one pair survives, but on a different window path
+```
+
+The finite-sample margin is also weak:
+
+```text
+noise-floor multiple 4.0   two loops
+noise-floor multiple 4.5   one loop
+noise-floor multiple 5.0   no loops
+```
+
+So the current conclusion is:
+
+> **1.edf contains a baseline-scale candidate that is stable to several detector-definition changes, but it is close to the finite-sample safety boundary and does not persist as the same event across modest window/hop/lag changes.**
+
+That makes the event **analysis-scale-sensitive**, not yet a robust physical
+holonomy observation.
+
+See [results/REAL1.md](results/REAL1.md) and
+[results/REAL1_STRESS.md](results/REAL1_STRESS.md).
 
 ## Why this repository exists
 
