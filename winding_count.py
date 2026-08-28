@@ -442,8 +442,8 @@ def plot_summary(
 def synthetic_loop_stream(
     *,
     windows: int = 80,
-    window: int = 512,
-    noise: float = 0.20,
+    window: int = 1024,
+    noise: float = 0.10,
     enclosing: bool = True,
     seed: int = 0,
 ) -> Array:
@@ -578,12 +578,12 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
 
 
 def self_test(args: argparse.Namespace) -> Dict[str, object]:
-    enclosing = synthetic_loop_stream(enclosing=True, seed=args.seed)
-    missing = synthetic_loop_stream(enclosing=False, seed=args.seed + 1)
+    enclosing = synthetic_loop_stream(window=1024, enclosing=True, seed=args.seed)
+    missing = synthetic_loop_stream(window=1024, enclosing=False, seed=args.seed + 1)
 
     test_args = argparse.Namespace(**vars(args))
-    test_args.window = 512
-    test_args.hop = 512
+    test_args.window = 1024
+    test_args.hop = 1024
     test_args.lag = 1
     test_args.modes = 2
     test_args.surrogates = max(12, min(args.surrogates, 24))
