@@ -146,6 +146,59 @@ holonomy observation.
 See [results/REAL1.md](results/REAL1.md) and
 [results/REAL1_STRESS.md](results/REAL1_STRESS.md).
 
+## SCALE0 — freeze time scale before asking about winding
+
+The REAL1 stress test exposed a real ambiguity: the candidate depends on the temporal coarse-graining.
+
+Rather than choosing the window/lag that makes winding look interesting, `scale_select.py` now chooses the physical time scale by **held-out forward prediction only**. It never computes winding.
+
+Selection:
+
+```text
+candidate window duration + lag
+        ↓
+fit local linear lag predictor on recent past
+        ↓
+score immediately following held-out block
+        ↓
+aggregate predictive gain across files
+        ↓
+freeze best physical window + lag
+```
+
+Then fixed rules give:
+
+```text
+hop = window / 4
+minimum loop duration = 3 × window duration
+```
+
+This also fixes a confound in the old hop stress test: keeping `min_loop_windows=12` while changing hop had silently changed the minimum physical loop duration.
+
+Run the scale selector on the three EEG files:
+
+```bash
+python3.13 scale_select.py E:\DocsHouse\450 ^
+  --pattern "*.edf" ^
+  --edf-eeg-only ^
+  --out-dir results\scale0
+```
+
+It writes `results\scale0\selected_scale.json`.
+
+Then use that same frozen physical scale for every winding run:
+
+```bash
+python3.13 winding_count.py E:\DocsHouse\450\1.edf ^
+  --edf-eeg-only ^
+  --scale-json results\scale0\selected_scale.json ^
+  --surrogates 1000 ^
+  --out results\scale0_1edf
+```
+
+Repeat for `2.edf` and `3.edf` without changing the scale file.
+
+See [results/SCALE0.md](results/SCALE0.md).
 ## Why this repository exists
 
 [MovingProblem](https://github.com/anttiluode/MovingProblem) was frozen at Gate 4 after finding a small but real failure mode:
