@@ -180,3 +180,41 @@ files remain heterogeneous
 
 SCALE0 is designed to stop the project from choosing the time scale because it
 likes the topological answer.
+
+## First SCALE0 run — invalid as a holonomy test
+
+The first run selected 20 s / 25 ms from 2.edf and 3.edf.
+
+Applied to 1.edf:
+
+```text
+20 s window
+5 s hop
+60 s minimum loop duration
+9 operator windows available
+12-hop loop requires 13 operator windows
+```
+
+Therefore:
+
+```text
+real odd loops = 0
+null odd loops = 0
+```
+
+was not evidence against the candidate. The event was unobservable by construction.
+
+This exposed a missing design constraint: an independently selected scale must also be **physically testable on the held-out target**.
+
+The selector is now rerun as:
+
+```bash
+python3.13 scale_select.py E:\DocsHouse\450 ^
+  --pattern "*.edf" ^
+  --exclude-names "1.edf" ^
+  --test-target-name "1.edf" ^
+  --edf-eeg-only ^
+  --out-dir results\scale0
+```
+
+The held-out target contributes only duration/sample-rate metadata to this constraint. Its signal values remain unseen by the selection criterion.
