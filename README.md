@@ -204,3 +204,45 @@ No holography required.
 None yet.
 
 The repository begins with a detector, a surrogate, and a null.
+
+
+## First real candidate
+
+A convenient first real stream is already documented in [HeadAsResonator](https://github.com/anttiluode/HeadAsResonator):
+
+```text
+OpenNeuro ds007630
+sub-03
+ses-20240821
+task-speechopen
+acq-pangolin
+run-02
+140 channels
+1200 Hz
+```
+
+The documented EDF filename is:
+
+```text
+sub-03_ses-20240821_task-speechopen_acq-pangolin_run-02_eeg.edf
+```
+
+A bounded first pass:
+
+```bash
+python -m pip install mne
+
+python winding_count.py \
+  sub-03_ses-20240821_task-speechopen_acq-pangolin_run-02_eeg.edf \
+  --max-seconds 120 \
+  --max-channels 32 \
+  --window 2048 \
+  --hop 512 \
+  --lag 8 \
+  --modes 6 \
+  --surrogates 100 \
+  --noise-floor-multiple 4 \
+  --out results/ds007630_sub03_run02
+```
+
+That run has **not** been performed or claimed in this repository yet. The point of documenting it is to make the next move a measurement, not another synthetic gate.
