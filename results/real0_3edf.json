@@ -1,0 +1,22 @@
+{
+  "file": "3.edf",
+  "channels": 64,
+  "sample_rate": 160.0,
+  "samples": 19680,
+  "window": 2048,
+  "hop": 512,
+  "lag": 8,
+  "modes": 6,
+  "windows": 35,
+  "surrogates": 100,
+  "real_odd_loops": 2.0,
+  "null_odd_mean": 3.64,
+  "null_odd_std": 1.7408044117591155,
+  "odd_loop_excess": -1.6400000000000001,
+  "odd_loop_z_vs_surrogate": -0.9420932006610709,
+  "odd_loop_empirical_p": 0.9207920792079208,
+  "real_pairs": [
+    {"pair_i":0,"pair_j":5,"closure_error":0.193143,"min_radius":0.232322,"median_radius":0.451162},
+    {"pair_i":2,"pair_j":4,"closure_error":0.206498,"min_radius":0.203941,"median_radius":0.572072}
+  ]
+}
