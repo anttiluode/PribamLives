@@ -623,6 +623,18 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
         max_loop_seconds=args.max_loop_seconds,
     )
 
+    # A loop spanning M path hops needs at least M+1 operator samples.
+    # Returning 0/0 here would be misleading: the detector would be incapable
+    # of observing the requested event in either real data or surrogates.
+    if len(starts) < effective_min_loop_windows + 1:
+        raise ValueError(
+            "analysis scale is not testable on this recording: "
+            f"{len(starts)} operator windows available, but a minimum "
+            f"{effective_min_loop_windows}-hop loop needs at least "
+            f"{effective_min_loop_windows + 1}. "
+            "Choose a shorter independently selected scale or a longer recording."
+        )
+
     real_events, real_diag = analyze_paths(
         projected,
         min_loop_windows=effective_min_loop_windows,
