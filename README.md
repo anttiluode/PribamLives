@@ -26,9 +26,7 @@ non-enclosing control
 
 A first version without the finite-sample safety floor failed this scientific control even though unit tests were green: its phase-randomized null produced about one spurious loop too. The current detector therefore requires a candidate loop to remain several `1/sqrt(N)` estimator-noise scales away from the degeneracy.
 
-**Real-stream status:** two recordings are negative relative to their surrogate
-nulls; one shorter recording contains an analysis-scale-sensitive candidate.
-No robust real holonomy claim has been made.
+**Real-stream status:** two recordings are negative at the original scale; the one shorter baseline candidate disappears at an independently selected testable scale. **No robust real holonomy excess has been demonstrated in these three EEG recordings.**
 
 ## REAL0 — first real streams
 
@@ -227,6 +225,32 @@ So the observed `0 real / 0 null` result was **structurally forced**: the detect
 `scale_select.py` now accepts `--test-target-name` and may use only the held-out target's duration/sample rate—not its signal values—to reject predictive scales that cannot physically test the hypothesis.
 
 From the already committed predictive ranking, the best remaining testable candidate is expected to be **12 s / 25 ms**.
+## SCALE0 result — held-out candidate disappears
+
+The corrected winding-blind selector used `2.edf` and `3.edf`, held `1.edf` signal values out, and chose the best **predictive + physically testable** scale:
+
+```text
+window = 12 s
+lag    = 25 ms
+hop    = 3 s
+minimum loop duration = 36 s
+```
+
+At that frozen scale, `1.edf` produced:
+
+```text
+real safe odd loops       0
+surrogate mean            0.314 ± 0.563
+excess                   -0.314
+```
+
+The original baseline-scale positive therefore does **not** survive independent scale choice.
+
+Also, 12 s should not be called a biological optimum: the predictive criterion preferred 20 s, then 16 s, then 12 s. The longer scales were rejected only because the short held-out file could not physically contain a qualifying loop.
+
+> **Current real-data result: no robust excess holonomy has been demonstrated in these three EEG recordings.**
+
+See [results/SCALE0_RESULT.md](results/SCALE0_RESULT.md).
 ## Why this repository exists
 
 [MovingProblem](https://github.com/anttiluode/MovingProblem) was frozen at Gate 4 after finding a small but real failure mode:
