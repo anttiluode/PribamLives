@@ -48,18 +48,41 @@ Two local 64-channel EDF recordings were run with the default detector.
 
 **No excess holonomy was observed.** Both recordings went in the opposite direction: phase-randomized surrogates produced more safe odd loops than the real stream.
 
-These EDFs contain mixed channel types, including auxiliary/device channels, so REAL0 is a generic multichannel result rather than an EEG-only neural result.
+For **3.edf**, the pre-specified EEG-only audit selected all 64 channels as EEG.
+The EEG-only run was numerically identical to the original 3.edf result, so the
+auxiliary-channel caveat does not apply to that file.
 
-The all-channel result is frozen. The next pre-specified replication is EEG-only / channel-filtered, using:
-
-```bash
-python winding_count.py 3.edf --list-channels
-python winding_count.py 3.edf --edf-eeg-only --surrogates 100
-```
-
-or explicit name-based exclusions if EDF type metadata are unreliable.
+The next step is independent-file replication, not another re-filter of 3.edf.
 
 See [results/REAL0.md](results/REAL0.md).
+
+## Replicate across files
+
+The original hypothesis was **excess** real winding, so `odd_loop_empirical_p`
+is retained as the upper-tail Monte Carlo p-value.
+
+Because REAL0 went in the opposite direction, current runs also report:
+
+```text
+odd_loop_empirical_p_upper
+odd_loop_empirical_p_lower
+odd_loop_empirical_p_two_sided
+```
+
+Do not reinterpret the old upper-tail p-value as evidence for suppression.
+
+For a directory of EDF files:
+
+```bash
+python batch_winding.py E:\\DocsHouse\\450 \
+  --pattern "*.edf" \
+  --edf-eeg-only \
+  --surrogates 100 \
+  --out-dir results/eeg_batch
+```
+
+The batch tool deliberately reports **one row per file** and does not combine
+p-values. Multiple files from one subject/session may not be independent.
 
 ## Why this repository exists
 
