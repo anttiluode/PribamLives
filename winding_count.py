@@ -437,8 +437,12 @@ def phase_randomized_surrogate(data: Array, rng: np.random.Generator) -> Array:
     return np.asarray(out, dtype=float)
 
 
-def empirical_p_value(real_value: float, null: Array) -> float:
-    return float((1.0 + np.sum(null >= real_value)) / (len(null) + 1.0))
+def empirical_p_values(real_value: float, null: Array) -> Tuple[float, float, float]:
+    """Monte Carlo upper, lower, and simple doubled-min-tail p-values."""
+    upper = float((1.0 + np.sum(null >= real_value)) / (len(null) + 1.0))
+    lower = float((1.0 + np.sum(null <= real_value)) / (len(null) + 1.0))
+    two_sided = float(min(1.0, 2.0 * min(upper, lower)))
+    return upper, lower, two_sided
 
 
 def write_events(path: Path, events: Sequence[LoopEvent]) -> None:
@@ -623,6 +627,8 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
     excess = real_odd - null_mean
     z = excess / (null_std + 1e-12)
 
+    p_upper, p_lower, p_two = empirical_p_values(real_odd, null_odd)
+
     summary: Dict[str, object] = {
         "samples": int(len(data)),
         "channels": int(data.shape[1]),
@@ -638,7 +644,10 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
         "null_odd_std": null_std,
         "odd_loop_excess": excess,
         "odd_loop_z_vs_surrogate": z,
-        "odd_loop_empirical_p": empirical_p_value(real_odd, null_odd),
+        "odd_loop_empirical_p": p_upper,
+        "odd_loop_empirical_p_upper": p_upper,
+        "odd_loop_empirical_p_lower": p_lower,
+        "odd_loop_empirical_p_two_sided": p_two,
         "null_total_mean": float(np.mean(null_total)),
         "null_total_std": float(np.std(null_total)),
     }
