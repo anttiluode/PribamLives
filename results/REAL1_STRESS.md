@@ -166,3 +166,33 @@ independent-file replication:    absent
 ```
 
 That is weaker than the raw 11/16 count, but much more informative.
+
+## Correction: the original hop attack changed physical loop duration
+
+The first stress run kept `min_loop_windows=12` fixed while changing hop.
+
+That means:
+
+```text
+hop 384  -> shorter minimum physical loop duration
+hop 512  -> baseline duration
+hop 640  -> longer minimum physical loop duration
+```
+
+So the original `hop 384` / `hop 640` failures cannot be read cleanly as evidence that the physical event disappears when only path sampling changes.
+
+The detector and stress runner are now corrected to express loop duration in seconds.
+
+The winding-blind SCALE0 procedure additionally fixes `hop = window/4` after selecting the window by forward prediction.
+
+Therefore the current state is:
+
+```text
+detector-threshold robustness:   measured
+finite-sample-margin robustness: weak
+window/lag scale sensitivity:    measured
+hop-only sensitivity:            old result confounded
+physical time scale:             to be selected independently by SCALE0
+```
+
+See [SCALE0.md](SCALE0.md).
