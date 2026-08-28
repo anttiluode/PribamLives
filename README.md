@@ -10,6 +10,24 @@ The first question is narrower:
 
 > **Does the Gate-4 holonomy failure mode occur above its own finite-sample / phase-randomized null floor in an ordinary long multichannel stream?**
 
+## Instrument status
+
+The synthetic control is CI-verified:
+
+```text
+known enclosing moving-frame loop
+    real odd-loop count       1
+    phase-randomized null     0.0 mean
+
+non-enclosing control
+    real odd-loop count       0
+    phase-randomized null     0.0 mean
+```
+
+A first version without the finite-sample safety floor failed this scientific control even though unit tests were green: its phase-randomized null produced about one spurious loop too. The current detector therefore requires a candidate loop to remain several `1/sqrt(N)` estimator-noise scales away from the degeneracy.
+
+**No real-stream result has been claimed yet.**
+
 ## Why this repository exists
 
 [MovingProblem](https://github.com/anttiluode/MovingProblem) was frozen at Gate 4 after finding a small but real failure mode:
