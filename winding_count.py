@@ -437,35 +437,44 @@ def synthetic_loop_stream(
     *,
     windows: int = 80,
     window: int = 512,
-    radius: float = 0.55,
-    noise: float = 0.10,
+    noise: float = 0.20,
     enclosing: bool = True,
     seed: int = 0,
 ) -> Array:
-    """Generate a Gaussian stream whose windowwise lag operator traces a loop.
+    """Positive control: fixed latent dynamics, slowly rotating observation frame.
 
-    This is only a positive-control generator for the analysis pipeline.
+    Two independent stationary AR(1) sources have fixed lag eigenvalues.
+    Their observation basis rotates slowly.
+
+    For a symmetric 2x2 operator, rotating the observation frame by angle theta
+    rotates the traceless coordinates (a,b) by 2*theta.  Therefore a physical
+    frame rotation from 0 to pi creates one closed winding at constant
+    population eigengap, exactly the Gate-4 geometry.
+
+    The non-enclosing control rotates only through pi/4 and therefore never
+    closes a loop.
+
+    Channel-wise phase randomization preserves each observed channel's global
+    spectrum but destroys the coherent cross-channel moving-frame relation.
     """
     rng = np.random.default_rng(seed)
     total = windows * window
     result = np.zeros((total, 2), dtype=float)
-    state = rng.normal(size=2)
+
+    source = np.zeros(2, dtype=float)
+    rhos = np.array([0.88, 0.28], dtype=float)
+    innovation = np.sqrt(1.0 - rhos * rhos)
+
+    max_theta = np.pi if enclosing else (np.pi / 4.0)
 
     for w in range(windows):
-        phi = 2.0 * np.pi * w / (windows - 1)
-        offset = 0.0 if enclosing else 1.25
-        a = offset + radius * np.cos(phi)
-        b = radius * np.sin(phi)
-
-        # Stable symmetric AR matrix with eigenvalues kept below 1.
-        base = 0.20 * np.eye(2) + np.array([[a, b], [b, -a]])
-        spectral = max(abs(np.linalg.eigvalsh(base)))
-        if spectral >= 0.92:
-            base *= 0.92 / spectral
+        theta = max_theta * w / max(windows - 1, 1)
+        ct, st = np.cos(theta), np.sin(theta)
+        mixing = np.array([[ct, -st], [st, ct]], dtype=float)
 
         for t in range(w * window, (w + 1) * window):
-            state = base @ state + noise * rng.normal(size=2)
-            result[t] = state
+            source = rhos * source + innovation * rng.normal(size=2)
+            result[t] = mixing @ source + noise * rng.normal(size=2)
 
     return result
 
