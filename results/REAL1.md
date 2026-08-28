@@ -123,3 +123,28 @@ winding excess or winding suppression.
 It does produce one candidate recording worth targeted robustness analysis.
 
 That is the next measurement.
+
+
+## Stress-test outcome
+
+The requested one-factor-at-a-time robustness run is complete.
+
+Raw aggregate:
+
+```text
+16 settings
+11/16 positive real-minus-null
+11/16 with at least one real safe odd loop
+8/16 upper-tail p <= 0.05
+```
+
+However, inspection of the individual pair files shows that this aggregate is
+too optimistic as a measure of a physical event.
+
+The exact baseline loops survive detector-definition changes but disappear or
+change identity under modest window/hop/lag perturbations. Both also sit close
+to the configured finite-sample safety floor.
+
+Therefore 1.edf remains a candidate only.
+
+See [REAL1_STRESS.md](REAL1_STRESS.md) for the full interpretation.
