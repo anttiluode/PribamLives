@@ -180,11 +180,12 @@ Run the scale selector on the three EEG files:
 ```bash
 python3.13 scale_select.py E:\DocsHouse\450 ^
   --pattern "*.edf" ^
+  --exclude-names "1.edf" ^
   --edf-eeg-only ^
   --out-dir results\scale0
 ```
 
-It writes `results\scale0\selected_scale.json`.
+It writes `results\scale0\selected_scale.json`. Here `1.edf` is deliberately held out from scale selection; the scale is chosen from `2.edf` and `3.edf` and then applied to the untouched candidate.
 
 Then use that same frozen physical scale for every winding run:
 
