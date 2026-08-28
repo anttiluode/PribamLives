@@ -83,6 +83,14 @@ def main() -> None:
             if key != "name":
                 setattr(run_args, key, value)
 
+        # Keep loop-duration semantics physical. With hop=window/4, the legacy
+        # 12-window minimum meant 3 analysis-window durations. Preserve that
+        # rule in seconds so changing hop alone does not change what "long
+        # enough to be a loop" means.
+        if sample_rate is not None:
+            run_args.min_loop_seconds = 3.0 * run_args.window / sample_rate
+            run_args.max_loop_seconds = None
+
         safe_name = setting["name"].replace("=", "_").replace(".", "p")
         run_args.out = str(args.out_dir / safe_name)
 
