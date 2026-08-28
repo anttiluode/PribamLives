@@ -1,0 +1,15 @@
+{
+  "files_used": [
+    "2.edf",
+    "3.edf"
+  ],
+  "hop_fraction": 0.25,
+  "lag_seconds": 0.025,
+  "max_loop_seconds": null,
+  "median_file_predictive_gain": 0.46340901109307764,
+  "min_loop_window_multiple": 3.0,
+  "note": "Scale selected without computing winding.",
+  "selection_rule": "maximize median file-level held-out forward predictive gain",
+  "window_seconds": 20.0,
+  "worst_file_predictive_gain": 0.45985334208719175
+}
