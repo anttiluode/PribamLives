@@ -21,9 +21,15 @@ lag 8
 100 phase-randomized surrogates
 ```
 
-The EDFs contain a mixture of channel types, including non-neural auxiliary
-channels such as temperature/device channels. Therefore this is a test of
-**generic multichannel drift**, not yet an EEG-only brain claim.
+The initial runs were treated conservatively as generic multichannel data because
+the EDF channel typing had not yet been audited.
+
+For **3.edf**, the pre-specified `--edf-eeg-only` replication selected all 64
+channels, each marked `eeg` by MNE and carrying ordinary 10-10-style electrode
+names. The EEG-only result was numerically identical to the original 3.edf run.
+
+Therefore the mixed-channel caveat does **not** apply to 3.edf. The channel
+typing of 2.edf should still be audited separately before calling that file EEG-only.
 
 ## Local file 2.edf
 
@@ -76,9 +82,31 @@ both candidates are well outside the detector's unsafe near-degeneracy region.
 That does **not** make them discoveries. The surrogate produces more such
 events on average.
 
+## EEG-only replication of 3.edf
+
+Command:
+
+```bash
+python winding_count.py 3.edf --edf-eeg-only --surrogates 100 --out results/3_eeg
+```
+
+MNE selected all 64 channels as EEG.
+
+The result was exactly identical to the original 3.edf run:
+
+```text
+real safe odd loops       2
+surrogate mean            3.64 ± 1.74
+real - null              -1.64
+z                        -0.942
+upper-tail empirical p    0.9208
+```
+
+So channel filtering did not rescue the holonomy hypothesis.
+
 ## Result
 
-> **REAL0 is negative: these two mixed-channel EDF streams do not show excess safe odd-winding near-return loops above the phase-randomized null.**
+> **REAL0 is negative: neither recording shows excess safe odd-winding near-return loops above the phase-randomized null; 3.edf is confirmed EEG-only under MNE's channel typing.**
 
 Indeed the direction is reversed in both files.
 
@@ -101,8 +129,9 @@ becomes a different measurable question.
 
 ## Pre-specified replication
 
-Because the EDFs contain temperature / device / auxiliary channels, the next
-replication should be selected by channel metadata/name **before** rerunning.
+Because 3.edf has now been audited and all 64 channels are EEG, the next useful
+step is no longer another filter of that same file. It is an **independent-file
+replication** of the apparent negative excess.
 
 Inspect:
 
@@ -128,11 +157,11 @@ The all-channel REAL0 result remains frozen regardless of what EEG-only does.
 
 ## Decision rule
 
-EEG-only real > null:
-    the holonomy question remains live in neural channels.
+Independent files repeatedly real > null:
+    the holonomy question remains live.
 
-EEG-only real ~= null:
+Independent files repeatedly real ~= null:
     no evidence; move to the geometry-vs-coordinate drift measurement.
 
-EEG-only real < null:
-    replicate the apparent suppression effect before interpreting it.
+Independent files repeatedly real < null:
+    quantify the apparent winding-suppression effect before interpreting it.
