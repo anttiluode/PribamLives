@@ -1,0 +1,18 @@
+{
+  "file": "2.edf",
+  "channels": 64,
+  "sample_rate": 160.0,
+  "samples": 19680,
+  "window": 2048,
+  "hop": 512,
+  "lag": 8,
+  "modes": 6,
+  "windows": 35,
+  "surrogates": 100,
+  "real_odd_loops": 1.0,
+  "null_odd_mean": 3.31,
+  "null_odd_std": 1.671496335622666,
+  "odd_loop_excess": -2.31,
+  "odd_loop_z_vs_surrogate": -1.381995252258867,
+  "odd_loop_empirical_p": 0.9702970297029703
+}
