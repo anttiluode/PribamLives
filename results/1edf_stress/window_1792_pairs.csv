@@ -1,0 +1,2 @@
+pair_i,pair_j,start_window,end_window,winding,parity,closure_error,min_radius,median_radius
+4,5,0,15,-1,1,0.19494915306777605,0.15171407565753967,0.22528928287349048

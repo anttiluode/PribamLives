@@ -1,0 +1,29 @@
+{
+  "channels": 64,
+  "hop": 512,
+  "lag": 4,
+  "modes": 6,
+  "null_odd_mean": 0.247,
+  "null_odd_std": 0.49798694762011586,
+  "null_total_mean": 0.252,
+  "null_total_std": 0.5024898008915206,
+  "odd_loop_empirical_p": 1.0,
+  "odd_loop_empirical_p_lower": 0.7802197802197802,
+  "odd_loop_empirical_p_two_sided": 1.0,
+  "odd_loop_empirical_p_upper": 1.0,
+  "odd_loop_excess": -0.247,
+  "odd_loop_z_vs_surrogate": -0.49599693562234765,
+  "real": {
+    "even_loops": 0.0,
+    "loops_total": 0.0,
+    "max_abs_open_path_turns": 1.9576005254940407,
+    "mean_abs_open_path_turns": 0.7825409627179857,
+    "odd_loops": 0.0,
+    "pairs": 15.0
+  },
+  "sample_rate": 160.0,
+  "samples": 9760,
+  "surrogates": 1000,
+  "window": 2048,
+  "windows": 16
+}
