@@ -255,6 +255,12 @@ def main() -> None:
     )
     parser.add_argument("input", type=Path)
     parser.add_argument("--pattern", default="*.edf")
+    parser.add_argument(
+        "--exclude-names",
+        type=str,
+        default="",
+        help="comma-separated filenames to exclude from scale selection",
+    )
     parser.add_argument("--edf-eeg-only", action="store_true")
     parser.add_argument("--max-channels", type=int, default=None)
     parser.add_argument("--max-seconds", type=float, default=None)
@@ -282,8 +288,16 @@ def main() -> None:
     else:
         files = [args.input]
 
+    excluded = {
+        piece.strip()
+        for piece in args.exclude_names.split(",")
+        if piece.strip()
+    }
+    if excluded:
+        files = [path for path in files if path.name not in excluded]
+
     if not files:
-        raise SystemExit("no input files")
+        raise SystemExit("no input files after exclusions")
 
     all_rows: List[ScoreRow] = []
 
