@@ -28,6 +28,39 @@ A first version without the finite-sample safety floor failed this scientific co
 
 **No real-stream result has been claimed yet.**
 
+## REAL0 — first real streams
+
+Two local 64-channel EDF recordings were run with the default detector.
+
+```text
+2.edf
+    real odd loops       1
+    surrogate null       3.31 ± 1.67
+    excess              -2.31
+    empirical p          0.970
+
+3.edf
+    real odd loops       2
+    surrogate null       3.64 ± 1.74
+    excess              -1.64
+    empirical p          0.921
+```
+
+**No excess holonomy was observed.** Both recordings went in the opposite direction: phase-randomized surrogates produced more safe odd loops than the real stream.
+
+These EDFs contain mixed channel types, including auxiliary/device channels, so REAL0 is a generic multichannel result rather than an EEG-only neural result.
+
+The all-channel result is frozen. The next pre-specified replication is EEG-only / channel-filtered, using:
+
+```bash
+python winding_count.py 3.edf --list-channels
+python winding_count.py 3.edf --edf-eeg-only --surrogates 100
+```
+
+or explicit name-based exclusions if EDF type metadata are unreliable.
+
+See [results/REAL0.md](results/REAL0.md).
+
 ## Why this repository exists
 
 [MovingProblem](https://github.com/anttiluode/MovingProblem) was frozen at Gate 4 after finding a small but real failure mode:
