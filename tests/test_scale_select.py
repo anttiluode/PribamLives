@@ -2,10 +2,33 @@ import unittest
 
 import numpy as np
 
-from scale_select import forward_predictive_gains
+from scale_select import forward_predictive_gains, target_scale_feasibility
 
 
 class ScaleSelectorTests(unittest.TestCase):
+    def test_target_feasibility_rejects_scale_that_cannot_fit_loop(self):
+        # 1.edf is approximately 61 s at 160 Hz.
+        bad = target_scale_feasibility(
+            target_samples=9760,
+            target_sample_rate=160.0,
+            window_seconds=20.0,
+            hop_fraction=0.25,
+            min_loop_window_multiple=3.0,
+        )
+        good = target_scale_feasibility(
+            target_samples=9760,
+            target_sample_rate=160.0,
+            window_seconds=12.0,
+            hop_fraction=0.25,
+            min_loop_window_multiple=3.0,
+        )
+        self.assertFalse(bad["testable"])
+        self.assertTrue(good["testable"])
+        self.assertLess(
+            bad["operator_windows"],
+            bad["required_operator_windows"],
+        )
+
     def test_forward_prediction_prefers_correct_lag_structure_over_zero_gain(self):
         rng = np.random.default_rng(5)
         n = 3000
