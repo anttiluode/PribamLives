@@ -51,6 +51,70 @@ def parse_float_list(text: str) -> List[float]:
         raise argparse.ArgumentTypeError("expected comma-separated numbers")
     return values
 
+def recording_length_metadata(path: Path) -> Tuple[int, float]:
+    """Read only recording length/sample-rate metadata when possible."""
+    suffix = path.suffix.lower()
+
+    if suffix == ".edf":
+        try:
+            import mne
+        except ImportError as exc:
+            raise RuntimeError("EDF metadata requires MNE") from exc
+        raw = mne.io.read_raw_edf(path, preload=False, verbose=False)
+        return int(raw.n_times), float(raw.info["sfreq"])
+
+    if suffix == ".wav":
+        from scipy.io import wavfile
+        sample_rate, data = wavfile.read(path, mmap=True)
+        return int(data.shape[0]), float(sample_rate)
+
+    data, sample_rate = load_stream(path)
+    if sample_rate is None:
+        raise ValueError(
+            f"{path}: target feasibility requires a known sample rate"
+        )
+    return int(len(data)), float(sample_rate)
+
+
+def target_scale_feasibility(
+    *,
+    target_samples: int,
+    target_sample_rate: float,
+    window_seconds: float,
+    hop_fraction: float,
+    min_loop_window_multiple: float,
+) -> Dict[str, float | int | bool]:
+    """Can the target recording physically contain one qualifying loop?"""
+    window = max(16, int(round(window_seconds * target_sample_rate)))
+    hop = max(1, int(round(window * hop_fraction)))
+
+    if window > target_samples:
+        windows = 0
+    else:
+        windows = int((target_samples - window) // hop + 1)
+
+    min_loop_seconds = (
+        float(min_loop_window_multiple)
+        * float(window)
+        / float(target_sample_rate)
+    )
+    min_loop_hops = max(
+        1,
+        int(np.ceil(min_loop_seconds * target_sample_rate / hop)),
+    )
+    required_windows = min_loop_hops + 1
+
+    return {
+        "testable": bool(windows >= required_windows),
+        "operator_windows": int(windows),
+        "min_loop_hops": int(min_loop_hops),
+        "required_operator_windows": int(required_windows),
+        "window_samples": int(window),
+        "hop_samples": int(hop),
+        "min_loop_seconds": float(min_loop_seconds),
+    }
+
+
 
 def ridge_lag_predictor(train: Array, lag: int, ridge_fraction: float) -> Array:
     """Fit x[t-lag] -> x[t] using ridge regression."""
@@ -261,6 +325,12 @@ def main() -> None:
         default="",
         help="comma-separated filenames to exclude from scale selection",
     )
+    parser.add_argument(
+        "--test-target-name",
+        type=str,
+        default=None,
+        help="held-out filename whose duration constrains the chosen scale; signal values are not scored",
+    )
     parser.add_argument("--edf-eeg-only", action="store_true")
     parser.add_argument("--max-channels", type=int, default=None)
     parser.add_argument("--max-seconds", type=float, default=None)
@@ -284,17 +354,25 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.input.is_dir():
-        files = sorted(args.input.glob(args.pattern))
+        matched_files = sorted(args.input.glob(args.pattern))
     else:
-        files = [args.input]
+        matched_files = [args.input]
+
+    target_path = None
+    if args.test_target_name is not None:
+        matches = [p for p in matched_files if p.name == args.test_target_name]
+        if len(matches) != 1:
+            raise SystemExit(
+                f"--test-target-name {args.test_target_name!r} matched {len(matches)} files"
+            )
+        target_path = matches[0]
 
     excluded = {
         piece.strip()
         for piece in args.exclude_names.split(",")
         if piece.strip()
     }
-    if excluded:
-        files = [path for path in files if path.name not in excluded]
+    files = [path for path in matched_files if path.name not in excluded]
 
     if not files:
         raise SystemExit("no input files after exclusions")
@@ -322,18 +400,60 @@ def main() -> None:
     if not aggregates:
         raise SystemExit("no candidate scale had enough validation folds")
 
-    # Require the winning scale to have a score from every supplied file.
+    # Require the winning scale to have a score from every scoring file.
     complete = [row for row in aggregates if row["files"] == len(files)]
     if not complete:
         raise SystemExit(
-            "no window/lag candidate had enough folds in every recording"
+            "no window/lag candidate had enough folds in every scoring recording"
         )
 
-    selected = complete[0]
+    target_metadata = None
+    if target_path is not None:
+        target_samples, target_sample_rate = recording_length_metadata(target_path)
+        target_metadata = {
+            "file": target_path.name,
+            "samples": int(target_samples),
+            "sample_rate": float(target_sample_rate),
+            "duration_seconds": float(target_samples / target_sample_rate),
+        }
+
+        eligible = []
+        for row in complete:
+            feasibility = target_scale_feasibility(
+                target_samples=target_samples,
+                target_sample_rate=target_sample_rate,
+                window_seconds=row["window_seconds"],
+                hop_fraction=args.hop_fraction,
+                min_loop_window_multiple=args.min_loop_window_multiple,
+            )
+            row["target_testable"] = feasibility["testable"]
+            row["target_operator_windows"] = feasibility["operator_windows"]
+            row["target_required_operator_windows"] = feasibility[
+                "required_operator_windows"
+            ]
+            row["target_min_loop_seconds"] = feasibility["min_loop_seconds"]
+            if feasibility["testable"]:
+                eligible.append(row)
+
+        if not eligible:
+            raise SystemExit(
+                "no predictively scored scale is physically testable on the held-out target"
+            )
+        selected = eligible[0]
+    else:
+        for row in complete:
+            row["target_testable"] = None
+        selected = complete[0]
 
     scale = {
-        "selection_rule": "maximize median file-level held-out forward predictive gain",
+        "selection_rule": (
+            "maximize median file-level held-out forward predictive gain "
+            "subject to held-out target being physically testable"
+            if target_path is not None
+            else "maximize median file-level held-out forward predictive gain"
+        ),
         "files_used": [path.name for path in files],
+        "held_out_test_target": target_metadata,
         "window_seconds": selected["window_seconds"],
         "lag_seconds": selected["lag_seconds"],
         "hop_fraction": float(args.hop_fraction),
@@ -345,7 +465,16 @@ def main() -> None:
         "worst_file_predictive_gain": selected[
             "worst_file_predictive_gain"
         ],
-        "note": "Scale selected without computing winding.",
+        "target_testable": selected.get("target_testable"),
+        "target_operator_windows": selected.get("target_operator_windows"),
+        "target_required_operator_windows": selected.get(
+            "target_required_operator_windows"
+        ),
+        "target_min_loop_seconds": selected.get("target_min_loop_seconds"),
+        "note": (
+            "Scale selected without computing winding. Held-out target values "
+            "were not scored; only target duration/sample-rate constrained testability."
+        ),
     }
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -359,7 +488,7 @@ def main() -> None:
 
     aggregate_path = args.out_dir / "scale_aggregate.json"
     aggregate_path.write_text(
-        json.dumps(aggregates, indent=2) + "\n",
+        json.dumps(complete, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -369,7 +498,10 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    plot_scores(args.out_dir / "scale_selection.png", complete)
+    plot_scores(
+        args.out_dir / "scale_selection.png",
+        [row for row in complete if row.get("target_testable") is not False],
+    )
 
     print("\n=== frozen predictive scale ===")
     print(json.dumps(scale, indent=2, sort_keys=True))
