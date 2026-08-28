@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
@@ -58,6 +59,10 @@ def load_stream(
     *,
     max_seconds: float | None = None,
     max_channels: int | None = None,
+    edf_eeg_only: bool = False,
+    include_regex: str | None = None,
+    exclude_regex: str | None = None,
+    list_channels: bool = False,
 ) -> Tuple[Array, float | None]:
     suffix = path.suffix.lower()
 
@@ -97,9 +102,49 @@ def load_stream(
 
         raw = mne.io.read_raw_edf(path, preload=False, verbose=False)
         sample_rate = float(raw.info["sfreq"])
+        channel_types = raw.get_channel_types()
+
+        if list_channels:
+            for index, (name, kind) in enumerate(zip(raw.ch_names, channel_types)):
+                print(f"{index:3d}  {kind:8s}  {name}")
+            raise SystemExit(0)
+
         picks = list(range(len(raw.ch_names)))
+
+        if edf_eeg_only:
+            eeg_picks = [
+                index
+                for index, kind in enumerate(channel_types)
+                if kind == "eeg"
+            ]
+            if eeg_picks:
+                picks = eeg_picks
+            else:
+                raise ValueError(
+                    "--edf-eeg-only requested but MNE marked no EDF channels as EEG"
+                )
+
+        if include_regex:
+            rx = re.compile(include_regex, re.IGNORECASE)
+            picks = [index for index in picks if rx.search(raw.ch_names[index])]
+
+        if exclude_regex:
+            rx = re.compile(exclude_regex, re.IGNORECASE)
+            picks = [index for index in picks if not rx.search(raw.ch_names[index])]
+
         if max_channels is not None:
             picks = picks[: int(max_channels)]
+
+        if len(picks) < 2:
+            raise ValueError("channel filters left fewer than two EDF channels")
+
+        selected = [
+            f"{index}:{channel_types[index]}:{raw.ch_names[index]}"
+            for index in picks
+        ]
+        print("Selected EDF channels:")
+        for item in selected:
+            print("  " + item)
 
         stop = None
         if max_seconds is not None:
@@ -682,6 +727,28 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="optional channel cap, taking the first channels in the file",
     )
+    parser.add_argument(
+        "--edf-eeg-only",
+        action="store_true",
+        help="for EDF input, keep only channels MNE marks as EEG",
+    )
+    parser.add_argument(
+        "--include-regex",
+        type=str,
+        default=None,
+        help="for EDF input, keep only channel names matching this regex",
+    )
+    parser.add_argument(
+        "--exclude-regex",
+        type=str,
+        default=None,
+        help="for EDF input, drop channel names matching this regex",
+    )
+    parser.add_argument(
+        "--list-channels",
+        action="store_true",
+        help="for EDF input, print index/type/name and exit",
+    )
     parser.add_argument("--min-loop-windows", type=int, default=12)
     parser.add_argument("--max-loop-windows", type=int, default=200)
     parser.add_argument("--return-fraction", type=float, default=0.25)
@@ -713,6 +780,10 @@ def main() -> None:
         args.input,
         max_seconds=args.max_seconds,
         max_channels=args.max_channels,
+        edf_eeg_only=args.edf_eeg_only,
+        include_regex=args.include_regex,
+        exclude_regex=args.exclude_regex,
+        list_channels=args.list_channels,
     )
     summary = run_analysis(args, data, sample_rate)
     print(json.dumps(summary, indent=2, sort_keys=True))
