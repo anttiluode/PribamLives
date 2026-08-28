@@ -609,8 +609,14 @@ def self_test(args: argparse.Namespace) -> Dict[str, object]:
 
     if result["enclosing_real_odd"] < 1:
         raise RuntimeError("self-test failed: enclosing synthetic path produced no odd loop")
-    if result["nonenclosing_real_odd"] > result["enclosing_real_odd"]:
-        raise RuntimeError("self-test failed: non-enclosing control exceeded positive control")
+    if result["enclosing_real_odd"] <= result["enclosing_null_mean"]:
+        raise RuntimeError(
+            "self-test failed: positive control does not clear phase-randomized null"
+        )
+    if result["nonenclosing_real_odd"] != 0:
+        raise RuntimeError("self-test failed: non-enclosing control produced an odd loop")
+    if result["nonenclosing_null_mean"] > 0.25:
+        raise RuntimeError("self-test failed: non-enclosing null floor is too high")
 
     return result
 
