@@ -215,6 +215,7 @@ def detect_near_return_loops(
     return_fraction: float = 0.25,
     min_radius_fraction: float = 0.35,
     winding_tolerance: float = 0.20,
+    absolute_noise_floor: float = 0.0,
 ) -> List[LoopEvent]:
     """Detect approximately closed loops around the origin.
 
@@ -228,7 +229,10 @@ def detect_near_return_loops(
         return []
 
     close_tol = return_fraction * median_radius
-    radius_floor = min_radius_fraction * median_radius
+    radius_floor = max(
+        min_radius_fraction * median_radius,
+        float(absolute_noise_floor),
+    )
     phase = unwrapped_phase(path)
 
     events: List[LoopEvent] = []
@@ -295,6 +299,7 @@ def analyze_paths(
     return_fraction: float,
     min_radius_fraction: float,
     winding_tolerance: float,
+    absolute_noise_floor: float = 0.0,
 ) -> Tuple[List[LoopEvent], Dict[str, float]]:
     pairs = pair_paths(projected)
     all_events: List[LoopEvent] = []
@@ -311,6 +316,7 @@ def analyze_paths(
                 return_fraction=return_fraction,
                 min_radius_fraction=min_radius_fraction,
                 winding_tolerance=winding_tolerance,
+                absolute_noise_floor=absolute_noise_floor,
             )
         )
 
@@ -495,6 +501,10 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
         return_fraction=args.return_fraction,
         min_radius_fraction=args.min_radius_fraction,
         winding_tolerance=args.winding_tolerance,
+        absolute_noise_floor=(
+            args.noise_floor_multiple
+            / np.sqrt(max(args.window - args.lag, 1))
+        ),
     )
 
     rng = np.random.default_rng(args.seed)
@@ -517,6 +527,10 @@ def run_analysis(args: argparse.Namespace, data: Array, sample_rate: float | Non
             return_fraction=args.return_fraction,
             min_radius_fraction=args.min_radius_fraction,
             winding_tolerance=args.winding_tolerance,
+            absolute_noise_floor=(
+                args.noise_floor_multiple
+                / np.sqrt(max(args.window - args.lag, 1))
+            ),
         )
         null_odd[s] = diag["odd_loops"]
         null_total[s] = diag["loops_total"]
@@ -578,6 +592,7 @@ def self_test(args: argparse.Namespace) -> Dict[str, object]:
     test_args.return_fraction = 0.40
     test_args.min_radius_fraction = 0.20
     test_args.winding_tolerance = 0.30
+    test_args.noise_floor_multiple = 4.0
 
     test_args.out = str(Path(args.out).with_name(Path(args.out).name + "_enclosing"))
     positive = run_analysis(test_args, enclosing, None)
@@ -617,6 +632,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--return-fraction", type=float, default=0.25)
     parser.add_argument("--min-radius-fraction", type=float, default=0.35)
     parser.add_argument("--winding-tolerance", type=float, default=0.20)
+    parser.add_argument(
+        "--noise-floor-multiple",
+        type=float,
+        default=4.0,
+        help="minimum safe radius = multiple / sqrt(window-lag)",
+    )
     parser.add_argument("--out", type=str, default="results/winding")
     return parser
 
